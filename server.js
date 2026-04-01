@@ -57,6 +57,21 @@ function parseIdFromResource(resource) {
     return parts[parts.length - 1] || null;
 }
 
+function parseResourceInfo(resource) {
+    if (!resource || typeof resource !== 'string') {
+        return { type: null, id: null };
+    }
+    const normalized = resource.toLowerCase();
+    const id = parseIdFromResource(resource);
+    if (normalized.includes('/merchant_orders/')) {
+        return { type: 'merchant_order', id };
+    }
+    if (normalized.includes('/payments/')) {
+        return { type: 'payment', id };
+    }
+    return { type: null, id };
+}
+
 function unwrapMpResponse(result) {
     if (!result) return null;
     return result.response || result;
@@ -69,35 +84,45 @@ function extractIncomingIds(req) {
     const topic = String(query.topic || query.type || body.type || '').toLowerCase();
     const action = String(body.action || '').toLowerCase();
     const dataId = query['data.id'] || query.data_id || (query.data && query.data.id) || (body.data && body.data.id) || null;
+    const queryResource = parseResourceInfo(query.resource);
+    const bodyResource = parseResourceInfo(body.resource);
+
+    const looksLikePayment =
+        topic === 'payment' ||
+        action.includes('payment') ||
+        queryResource.type === 'payment' ||
+        bodyResource.type === 'payment';
+
+    const looksLikeMerchantOrder =
+        topic === 'merchant_order' ||
+        action.includes('merchant_order') ||
+        queryResource.type === 'merchant_order' ||
+        bodyResource.type === 'merchant_order';
 
     const paymentId =
-        query.id ||
-        dataId ||
-        body.id ||
-        parseIdFromResource(query.resource) ||
-        parseIdFromResource(body.resource) ||
-        null;
+        looksLikePayment
+            ? (query.id || dataId || body.id || queryResource.id || bodyResource.id || null)
+            : null;
 
     const merchantOrderId =
         query.merchant_order_id ||
-        ((topic === 'merchant_order' || action.includes('merchant_order')) && dataId ? dataId : null) ||
-        parseIdFromResource(query.resource) ||
-        parseIdFromResource(body.resource) ||
+        (looksLikeMerchantOrder && dataId ? dataId : null) ||
+        (looksLikeMerchantOrder ? (query.id || body.id || queryResource.id || bodyResource.id) : null) ||
         null;
 
-    return { topic, action, paymentId, merchantOrderId };
+    return { topic, action, paymentId, merchantOrderId, looksLikePayment, looksLikeMerchantOrder };
 }
 
 async function resolvePaymentFromWebhook(req) {
-    const { topic, action, paymentId, merchantOrderId } = extractIncomingIds(req);
+    const { topic, action, paymentId, merchantOrderId, looksLikePayment, looksLikeMerchantOrder } = extractIncomingIds(req);
 
     // Caso comun: webhook de payment
-    if (paymentId && (topic === 'payment' || action.includes('payment') || !topic)) {
+    if (paymentId && (topic === 'payment' || action.includes('payment') || looksLikePayment)) {
         return { paymentId: String(paymentId), source: 'payment' };
     }
 
     // Caso QR/POS frecuente: webhook de merchant_order
-    const shouldTryMerchantOrder = topic === 'merchant_order' || action.includes('merchant_order');
+    const shouldTryMerchantOrder = topic === 'merchant_order' || action.includes('merchant_order') || looksLikeMerchantOrder;
     if (shouldTryMerchantOrder && merchantOrderId) {
         let merchantOrderRaw;
         try {
@@ -172,6 +197,10 @@ app.post('/webhook', async (req, res) => {
             console.log(`Pago no aprobado (status=${paymentDetails.status}).`);
         }
     } catch (error) {
+        if (error && (error.status === 404 || error.statusCode === 404)) {
+            console.error('Pago no encontrado en Mercado Pago (404). Revisa topic/resource del webhook.');
+            return res.sendStatus(200);
+        }
         console.error('Error al procesar webhook:', error.message);
     }
 
