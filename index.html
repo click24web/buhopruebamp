@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Búho 24hs - Monitor de Pagos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- SOCKET.IO CLIENT -->
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="night-mode">
+    <div id="app">
+        <main class="dashboard-container">
+            <div class="stealth-layer">
+                <div class="clock-display" id="clock">00:00:00</div>
+                <div class="owl-logo-container">
+                    <div class="owl-glow"></div>
+                    <img src="owl-mascot.png" alt="El Búho Logo" id="owl-logo" class="breathing">
+                </div>
+                <div class="status-indicator">
+                    <span class="dot pulse"></span>
+                    <span id="socket-status" class="status-text">MONITOREANDO COMPRAS...</span>
+                </div>
+            </div>
+
+            <!-- PAYMENT ALERT OVERLAY -->
+            <div id="payment-alert" class="payment-overlay hidden">
+                <div class="alert-content">
+                    <h1 class="alert-title">¡PAGO RECIBIDO!</h1>
+                    <div class="amount-badge">
+                        <span class="currency">$</span>
+                        <span id="payment-amount" class="amount">0.00</span>
+                    </div>
+                    <p class="alert-subtitle">CONFIRMADO POR MERCADO PAGO</p>
+                </div>
+            </div>
+
+            <aside class="recent-list">
+                <h3>Recientes</h3>
+                <ul id="history-container"></ul>
+            </aside>
+            
+            <div class="dev-tools">
+                <button id="btn-simulate" class="btn-neon">SIMULAR PAGO ($1250)</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
