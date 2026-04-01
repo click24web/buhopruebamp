@@ -1,4 +1,4 @@
-// EL BÚHO 24HS - FRONTEND LOGIC (REAL-TIME) 🦉⚡
+// EL BUHO 24HS - FRONTEND LOGIC (REAL-TIME)
 
 const clockElement = document.getElementById('clock');
 const paymentAlert = document.getElementById('payment-alert');
@@ -24,7 +24,7 @@ function triggerPaymentNotification(amount) {
     paymentAmount.textContent = parseFloat(amount).toLocaleString('es-AR', { minimumFractionDigits: 2 });
     paymentAlert.classList.remove('hidden');
     setTimeout(() => paymentAlert.classList.add('active'), 10);
-    
+
     // Almacenar en historial
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -34,7 +34,7 @@ function triggerPaymentNotification(amount) {
     historyContainer.prepend(item);
     if (historyContainer.children.length > 5) historyContainer.lastElementChild.remove();
 
-    // Ocultar alerta después de 7 segundos
+    // Ocultar alerta despues de 7 segundos
     setTimeout(() => {
         paymentAlert.classList.remove('active');
         setTimeout(() => {
@@ -45,23 +45,24 @@ function triggerPaymentNotification(amount) {
 }
 
 // 3. CONEXION REAL (SOCKET.IO)
-// io() intentará conectarse automáticamente al mismo host que sirve el dashboard (Render).
+// io() intentara conectarse automaticamente al mismo host que sirve el dashboard.
 const socket = io();
 
 socket.on('connect', () => {
-    console.log("🦉 El Búho 24hs está conectado con el servidor!");
-    socketStatusText.textContent = "MONITOREANDO COMPRAS...";
-    socketStatusText.classList.add("online");
+    console.log('El Buho 24hs esta conectado con el servidor.');
+    socketStatusText.textContent = 'MONITOREANDO COMPRAS...';
+    socketStatusText.classList.add('online');
 });
 
 socket.on('real_payment', (data) => {
-    console.log("¡NUEVO PAGO DETECTADO!", data);
+    console.log('NUEVO PAGO DETECTADO', data);
     triggerPaymentNotification(data.amount);
 });
 
 socket.on('disconnect', () => {
-    console.log("❌ Conexión perdida con el Búho.");
-    socketStatusText.textContent = "SIN CONEXION - INTENTANDO RECONECTAR...";
+    console.log('Conexion perdida con el Buho.');
+    socketStatusText.textContent = 'SIN CONEXION - INTENTANDO RECONECTAR...';
+    socketStatusText.classList.remove('online');
 });
 
 // 4. MOCK / SIMULACION
@@ -69,4 +70,4 @@ btnSimulate.addEventListener('click', () => {
     triggerPaymentNotification(Math.floor(Math.random() * 5000) + 100);
 });
 
-console.log("🦉 El Búho Dashboard Ready.");
+console.log('El Buho Dashboard Ready.');

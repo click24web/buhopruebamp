@@ -1,44 +1,62 @@
-# 🦉 El Búho 24hs: Guía de Integración Mercado Pago
+# El Buho 24hs: Guia de Integracion Mercado Pago
 
-Esta guía te explica cómo conectar el Dashboard de El Búho con tu cuenta real de Mercado Pago para que las alertas funcionen automáticamente.
+Esta guia te explica como conectar el Dashboard de El Buho con tu cuenta real de Mercado Pago para que las alertas funcionen automaticamente.
 
 ---
 
 ## 1. Obtener tus Credenciales
-1. Entrá a [Mercado Pago Developers - Dashboard](https://www.mercadopago.com.ar/developers/panel/app).
-2. Creá una nueva aplicación (Nombre sugerido: `BuhoDashboard`).
-3. En el menú de la izquierda, buscá **"Credenciales de producción"**.
-4. Copiá tu **Access Token**. (Es una clave larga que empieza con `APP_USR-...`).
+1. Entra a [Mercado Pago Developers - Dashboard](https://www.mercadopago.com.ar/developers/panel/app).
+2. Crea una nueva aplicacion (nombre sugerido: `BuhoDashboard`).
+3. Busca **Credenciales de produccion**.
+4. Copia tu **Access Token** (empieza con `APP_USR-...`).
 
 > [!IMPORTANT]
-> **Seguridad:** Nunca compartas este Access Token con nadie. Solo guardalo para el paso del `server.js`.
+> Seguridad: nunca compartas tu Access Token.
 
 ---
 
-## 2. Configurar el Webhook (Las Notificaciones)
-Para que Mercado Pago avise al Dashboard, tenés que ir a la sección **"Webhooks"** en tu aplicación:
-1. En **"Modo de notificación"**, elegí `HTTP`.
-2. En **"URL de notificación"**, vas a tener que poner la dirección de tu servidor. 
-   * *Si estás probando de forma local, podés usar una herramienta como **ngrok** para que Mercado Pago vea tu computadora.*
-3. En **"Eventos"**, marcá la casilla de **`payment`** (esto es lo más importante).
+## 2. Configurar Variables de Entorno
+Crea o edita `.env` en la carpeta del proyecto:
+
+```env
+MP_ACCESS_TOKEN=APP_USR-...
+PORT=3000
+MP_QR_ID=128515446
+```
+
+- `MP_QR_ID` filtra pagos solo para ese QR/POS.
+- Si no pones `MP_QR_ID`, el backend acepta pagos aprobados de cualquier POS asociado.
 
 ---
 
-## 3. El Servidor Puente (server.js)
-Este archivo es el encargado de recibir los pagos y "avisarle" al Búho.
-
-### Para ponerlo en marcha:
-1. Abrí una terminal en la carpeta `/buho`.
-2. Corré el comando: `npm install express socket.io mercadopago`
-3. Editá el archivo `server.js` (que te voy a crear ahora) con tu `Access Token`.
-4. Corré el servidor: `node server.js`
+## 3. Levantar el Servidor
+1. Abre una terminal en `/buho`.
+2. Ejecuta `npm install`.
+3. Ejecuta `npm start`.
+4. Verifica estado en `http://localhost:3000/health`.
 
 ---
 
-## 4. ¿Cómo mostrárselo al cliente?
-1. Abrí el `index.html` en el navegador del cliente.
-2. Si el servidor puente está prendido, el Dashboard estará "Escuchando".
-3. Mostrale cómo funciona primero con el botón de **Simulación**.
-4. Podés hacer un pago de prueba de $1 (un peso) desde otra cuenta a su QR para que vea cómo el Búho se activa **en vivo**.
+## 4. Configurar Webhook en Mercado Pago (obligatorio)
+1. En tu app de Mercado Pago, configura URL de notificacion:
+   - `https://TU_DOMINIO/webhook`
+2. Activa eventos:
+   - `payment`
+   - `merchant_order`
+3. Guarda cambios.
 
-¡Eso lo va a dejar loquísimo! 🚀🦉
+> Si pruebas localmente, usa un tunel publico (por ejemplo `ngrok`) para exponer `localhost:3000`.
+
+---
+
+## 5. Abrir Dashboard Correctamente
+Abre `http://localhost:3000`.
+
+No abras `index.html` directo con `file://`, porque asi Socket.IO no conecta al backend.
+
+---
+
+## 6. Prueba End-to-End
+1. Comprueba que el dashboard diga `MONITOREANDO COMPRAS...`.
+2. Haz un pago de prueba en el QR con ID `128515446`.
+3. Revisa logs del backend; debe aparecer `WEBHOOK RECIBIDO` y luego `PAGO APROBADO detectado...`.
