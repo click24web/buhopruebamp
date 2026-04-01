@@ -10,7 +10,7 @@ const QR_ID_FILTRO = "128515446"; // ID Único de El Búho
 const PORT = process.env.PORT || 3000;
 
 if (!ACCESS_TOKEN) {
-    console.error("❌ ERROR: No se encontró la variable MP_ACCESS_TOKEN en Render.");
+    console.error("❌ ERROR: No se encontró la variable MP_ACCESS_TOKEN. Revisa las variables de entorno en Render.");
 }
 
 const client = new mercadopago.MercadoPagoConfig({ accessToken: ACCESS_TOKEN });
@@ -25,39 +25,48 @@ const io = socketIo(server, { cors: { origin: "*" } });
 
 // --- 2. ENDPOINT DE WEBHOOK ---
 app.post('/webhook', async (req, res) => {
+    console.log("-----------------------------------------");
+    console.log("🔔 WEBHOOK RECIBIDO!");
+    console.log("Query:", JSON.stringify(req.query));
+    console.log("Body:", JSON.stringify(req.body));
+
     const paymentId = req.query.id || (req.body.data && req.body.data.id);
 
     if (paymentId) {
         try {
-            console.log(`Buscando info del pago: ${paymentId}`);
+            console.log(`🔍 Buscando info del pago ID: ${paymentId}...`);
             const paymentDetails = await payment.get({ id: paymentId });
             
-            // FILTRO DE SEGURIDAD: Solo pagos aprobados y de ESTE QR exacto
-            const esAprobado = paymentDetails.status === 'approved';
-            const esEsteQR = String(paymentDetails.pos_id) === QR_ID_FILTRO || 
-                             String(paymentDetails.external_reference) === QR_ID_FILTRO;
+            console.log("Detalles del Pago recibidos de MP:");
+            console.log("- Status:", paymentDetails.status);
+            console.log("- Monto:", paymentDetails.transaction_amount);
+            console.log("- POS ID:", paymentDetails.pos_id);
+            console.log("- External Ref:", paymentDetails.external_reference);
 
-            if (esAprobado) {
-                if (esEsteQR) {
-                    const amount = paymentDetails.transaction_amount;
-                    console.log(`¡Pago filtrado para BÚHO OK! Monto: $${amount}`);
-                    io.emit('real_payment', { amount: amount });
-                } else {
-                    console.log(`Pago de otro local ignorado (POS ID: ${paymentDetails.pos_id})`);
-                }
+            // FILTRO: Por ahora vamos a dejarlo que pase si es "approved"
+            // aunque el ID no coincida perfectamente, para ver si llega algo.
+            if (paymentDetails.status === 'approved') {
+                const amount = paymentDetails.transaction_amount;
+                console.log(`✅ ¡PAGO APROBADO detectado! Enviando alerta al Búho...`);
+                io.emit('real_payment', { amount: amount });
+            } else {
+                console.log(`ℹ️ El pago no está aprobado (Status: ${paymentDetails.status})`);
             }
         } catch (error) {
-            console.error('Error al procesar pago:', error.message);
+            console.error('❌ Error al procesar pago:', error.message);
         }
+    } else {
+        console.log("⚠️ Webhook recibido pero no se encontró un Payment ID.");
     }
+    
     res.sendStatus(200);
 });
 
 server.listen(PORT, () => {
     console.log(`🦉 Puente Búho Blindado activo en puerto ${PORT}`);
-    console.log(`Filtrando para Caja ID: ${QR_ID_FILTRO}`);
+    console.log(`Configurado con Token: ${ACCESS_TOKEN ? 'SÍ' : 'NO'}`);
 });
 
 io.on('connection', (socket) => {
-    console.log('Dashboard Búho conectado.');
+    console.log('📡 Dashboard Búho conectado vía Socket.io');
 });
